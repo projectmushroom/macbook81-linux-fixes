@@ -1,12 +1,14 @@
 # MacBook8,1 (12" Retina MacBook, Early 2015) Linux fixes
 
-Working, root-caused fixes for the two bugs that make Linux on this machine
-miserable: the **dead internal keyboard/trackpad** (applespi `-110` timeouts)
-and the **keyboard dying after suspend/resume**. Plus a few optional extras.
+Working, root-caused fixes for the bugs that make Linux on this machine
+miserable: the **dead internal keyboard/trackpad** (applespi `-110` timeouts),
+the **keyboard dying after suspend/resume**, and notes for the now-working
+**internal speakers**. Plus a few optional extras.
 
-Everything here uses stock in-tree drivers — no DKMS module, nothing to rebuild
-on kernel updates. Tested on Arch-family distros (CachyOS, Omarchy) with
-kernels 6.x–7.x; the analysis and boot parameter apply to any distro.
+The keyboard/trackpad fixes use stock in-tree drivers — no DKMS module and
+nothing to rebuild on kernel updates. The separate speaker solution does use
+DKMS. Tested on Arch-family distros (CachyOS, Omarchy) with kernels 6.x–7.x;
+the keyboard analysis and boot parameter apply to any distro.
 
 ## TL;DR
 
@@ -20,6 +22,8 @@ Install [`fixes/system-sleep/95-macbook-spi-resume`](fixes/system-sleep/95-macbo
 into `/usr/lib/systemd/system-sleep/` (mode 0755).
 
 That's the keyboard fixed at boot and after suspend. Details below.
+
+For built-in sound on Arch/Omarchy, see [`audio/README.md`](audio/README.md).
 
 ## Bug 1: keyboard/trackpad dead, applespi times out with -110
 
