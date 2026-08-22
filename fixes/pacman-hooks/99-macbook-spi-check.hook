@@ -1,0 +1,16 @@
+# Verify the MacBook8,1 internal-keyboard fix after anything that could
+# regenerate the boot config. Warn-only; never fails the transaction.
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = linux
+Target = linux-t2
+Target = limine*
+Target = mkinitcpio*
+
+[Action]
+Description = Checking MacBook SPI keyboard fix is still in boot config...
+When = PostTransaction
+Exec = /usr/local/bin/macbook-spi-check

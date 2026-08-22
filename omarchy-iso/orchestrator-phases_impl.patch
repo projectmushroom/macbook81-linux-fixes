@@ -1,0 +1,63 @@
+--- a/usr/share/omarchy-iso/orchestrator/phases_impl.py	2026-08-14 18:00:08.000000000 +0200
++++ b/usr/share/omarchy-iso/orchestrator/phases_impl.py	2026-08-22 10:01:01.751163847 +0200
+@@ -1939,3 +1939,60 @@
+             check=False,
+             capture_output=True,
+         )
++
++
++# ─────────────────────────────────────────────────────────────────────────────
++# apply_macbook81_fixes: MacBook8,1 (12" 2015) hardware quirks. Must run before
++# finalize_limine_boot so the kernel-cmdline drop-in lands in the final Limine
++# config/UKI build, and after run_system_finalizer so it wins over the stock
++# hardware scripts. Payload ships on the ISO in /usr/local/share/macbook81/.
++# No-op on every other machine.
++#
++# Background: on the MacBook8,1 the LPSS DMA controller's interrupt is dead in
++# hardware. Any dw_dmac driver binding it sends spi-pxa2xx down the DMA path
++# and the internal keyboard/trackpad die with -110 timeouts (see
++# basecamp/omarchy#1954). pci-stub.ids=8086:9ce0 forces the PIO path. S3 resume
++# additionally loses the LPSS private clock/reset registers, which the sleep
++# hook restores.
++# ─────────────────────────────────────────────────────────────────────────────
++
++MACBOOK81_PAYLOAD = Path("/usr/local/share/macbook81")
++
++MACBOOK81_FILES = [
++    ("20-macbook.conf", "etc/limine-entry-tool.d/20-macbook.conf", 0o644),
++    ("macbook-spi.conf", "etc/modprobe.d/macbook-spi.conf", 0o644),
++    ("95-macbook-spi-resume", "usr/lib/systemd/system-sleep/95-macbook-spi-resume", 0o755),
++    ("99-macbook-spi-check.hook", "etc/pacman.d/hooks/99-macbook-spi-check.hook", 0o644),
++    ("macbook-spi-check", "usr/local/bin/macbook-spi-check", 0o755),
++    ("facetime-cam-d3.service", "etc/systemd/system/facetime-cam-d3.service", 0o644),
++]
++
++
++def apply_macbook81_fixes(ctx: InstallContext) -> None:
++    try:
++        product = Path("/sys/class/dmi/id/product_name").read_text().strip()
++    except OSError:
++        product = ""
++    if product != "MacBook8,1":
++        info("Not a MacBook8,1; skipping MacBook8,1 fixes")
++        return
++    if not MACBOOK81_PAYLOAD.is_dir():
++        error("MacBook8,1 detected but /usr/local/share/macbook81 payload is missing; skipping")
++        return
++
++    for src_name, dst_rel, mode in MACBOOK81_FILES:
++        dst = ctx.target / dst_rel
++        dst.parent.mkdir(parents=True, exist_ok=True)
++        shutil.copy(MACBOOK81_PAYLOAD / src_name, dst)
++        dst.chmod(mode)
++
++    # Equivalent of `systemctl enable facetime-cam-d3.service` without a chroot.
++    for wants in ("multi-user.target.wants", "suspend.target.wants"):
++        wants_dir = ctx.target / "etc/systemd/system" / wants
++        wants_dir.mkdir(parents=True, exist_ok=True)
++        link = wants_dir / "facetime-cam-d3.service"
++        if not link.is_symlink():
++            link.symlink_to("/etc/systemd/system/facetime-cam-d3.service")
++
++    info("Applied MacBook8,1 fixes: SPI keyboard PIO cmdline, S3 resume hook, "
++         "pacman guard, camera D3 service")

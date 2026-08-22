@@ -1,0 +1,19 @@
+#!/bin/sh
+# MacBook8,1 guard: verify the internal-keyboard fix survived a kernel/bootloader
+# update. The fix is `pci-stub.ids=8086:9ce0` on the kernel cmdline (keeps
+# dw_dmac drivers off the LPSS DMA controller, whose IRQ is dead, so
+# spi-pxa2xx falls back to PIO). Runs from a pacman post-transaction hook; only
+# warns, never blocks the transaction.
+limine_conf=""
+for candidate in /boot/limine.conf /boot/EFI/limine/limine.conf /boot/limine/limine.conf; do
+	[ -r "$candidate" ] && { limine_conf=$candidate; break; }
+done
+if [ -z "$limine_conf" ] || ! grep -q 'pci-stub\.ids=8086:9ce0' "$limine_conf"; then
+	echo "==> WARNING: MacBook keyboard fix (pci-stub.ids=8086:9ce0) is MISSING from ${limine_conf:-the limine config}" >&2
+	echo "==>          The internal keyboard/trackpad may be DEAD on next boot." >&2
+	echo "==>          Check /etc/limine-entry-tool.d/20-macbook.conf exists, then run: limine-update" >&2
+fi
+if [ ! -r /etc/modprobe.d/macbook-spi.conf ]; then
+	echo "==> WARNING: /etc/modprobe.d/macbook-spi.conf (dw_dmac blacklist) is missing." >&2
+fi
+exit 0

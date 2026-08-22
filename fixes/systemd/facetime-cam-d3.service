@@ -1,0 +1,10 @@
+[Unit]
+Description=Force unused FaceTime camera (02:00.0) into D3hot
+After=multi-user.target suspend.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/setpci -s 02:00.0 CAP_PM+4.b=3
+
+[Install]
+WantedBy=multi-user.target suspend.target

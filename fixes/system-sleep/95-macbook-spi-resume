@@ -1,0 +1,44 @@
+#!/bin/sh
+# MacBook8,1: revive the SPI keyboard/trackpad controller after suspend.
+#
+# S3 resets the LPSS private registers of the GSPI controller at
+# 0000:00:15.4 (clock gate at priv+0x00, function reset at priv+0x04).
+# Apple's firmware does not restore them and neither does the
+# PCI-enumerated pxa2xx_spi_pci resume path (only acpi_lpss.c does that,
+# via LPSS_SAVE_CTX, on non-Mac platforms). Without this every applespi
+# transfer times out with -110 and the internal keyboard/trackpad are dead.
+#
+# Recovery: unbind the driver (releases the MMIO region so /dev/mem may
+# map it despite IO_STRICT_DEVMEM), ungate clock + deassert reset + set
+# CS control, rebind (probe redoes the rest). Verified live 2026-08-09.
+
+[ "$1" = "post" ] || exit 0
+
+DEV=0000:00:15.4
+DRV=/sys/bus/pci/drivers/pxa2xx_spi_pci
+SYSDEV=/sys/bus/pci/devices/$DEV
+
+[ -e "$SYSDEV" ] || exit 0
+
+if [ -e "$SYSDEV/driver" ]; then
+    echo "$DEV" > "$DRV/unbind" || exit 1
+fi
+
+python3 - "$SYSDEV" <<'EOF'
+import mmap, struct, sys
+sysdev = sys.argv[1]
+with open(f"{sysdev}/resource") as f:
+    bar = int(f.readline().split()[0], 16)
+fd = open("/dev/mem", "r+b")
+m = mmap.mmap(fd.fileno(), 0x1000, mmap.MAP_SHARED,
+              mmap.PROT_READ | mmap.PROT_WRITE, offset=bar)
+def w32(off, val): m[off:off+4] = struct.pack("<I", val)
+w32(0x804, 0x3)  # deassert function reset
+w32(0x800, 0x1)  # ungate clock
+w32(0x818, 0x3)  # CS ctrl: SW mode | CS high
+m.close()
+EOF
+rc=$?
+
+echo "$DEV" > "$DRV/bind"
+exit $rc

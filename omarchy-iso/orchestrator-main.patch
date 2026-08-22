@@ -1,0 +1,20 @@
+--- a/usr/share/omarchy-iso/orchestrator/main.py	2026-08-14 18:00:08.000000000 +0200
++++ b/usr/share/omarchy-iso/orchestrator/main.py	2026-08-22 10:01:11.467146207 +0200
+@@ -34,6 +34,7 @@
+         arch_install_system,
+         configure_hibernation,
+         run_system_finalizer,
++        apply_macbook81_fixes,
+         stage_provisioning_state,
+         finalize_limine_boot,
+         run_chroot_finalizer,
+@@ -51,6 +52,9 @@
+         ("Installing Arch + Omarchy",  arch_install_system),
+         ("Configuring hibernation",    configure_hibernation),
+         ("Configuring system",         run_system_finalizer),
++        # Before finalize_limine_boot: the MacBook8,1 cmdline drop-in must be in
++        # place for the final Limine config build. No-op on other machines.
++        ("Applying MacBook8,1 fixes",  apply_macbook81_fixes),
+         # Before finalize_limine_boot: the deferred-provisioning cryptkey drop-in and keyfile
+         # must be in place for the final UKI build.
+         ("Staging provisioning",          stage_provisioning_state),
