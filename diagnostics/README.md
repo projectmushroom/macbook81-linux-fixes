@@ -1,5 +1,21 @@
 # Diagnostics
 
+## Health check
+
+`health-check.sh` is a read-only summary of the fixes and common MacBook8,1
+failure modes:
+
+```bash
+./diagnostics/health-check.sh
+```
+
+Run it as the logged-in desktop user so it can inspect both system and user
+services. It checks the PIO boot parameter, live PCI binding, Apple SPI input
+nodes, resume-hook installation, suspend/resume pairs, patched speaker stack,
+PipeWire scheduling, Broadcom Wi-Fi firmware warnings, camera support, battery
+health, failed services, and storage errors. A non-zero exit means a core fix
+or storage check failed; advisory warnings alone still exit successfully.
+
 Small root-only tools (python3, `/dev/mem`) used to root-cause the SPI keyboard
 failure. Ordered roughly by usefulness:
 
