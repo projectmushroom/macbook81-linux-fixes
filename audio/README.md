@@ -15,9 +15,14 @@ this with a simple mixer or PipeWire-only fix.
 Install the build dependencies and headers matching the running kernel:
 
 ```bash
-sudo pacman -S --needed base-devel dkms wget linux-headers
+sudo pacman -S --needed base-devel dkms wget linux-headers rtkit
 test -e /lib/modules/$(uname -r)/build
 ```
+
+`rtkit` is not required for device discovery, but PipeWire uses it to obtain
+real-time scheduling. Without it, audio still starts while logging
+`org.freedesktop.DBus.Error.ServiceUnknown`, and is more vulnerable to glitches
+under system load.
 
 For a nonstandard kernel, install its matching header package instead, such as
 `linux-lts-headers`.
@@ -77,7 +82,15 @@ systemctl is-enabled mb81-resume-recover.service
 
 # Should show MacBook Speaker (Raw), the EQ sink, and DSP output
 wpctl status | grep -i speaker
+
+# Expected: active
+systemctl is-active rtkit-daemon.service
 ```
+
+The patched HDA driver can emit many `spurious response` messages, especially
+while the resume-recovery service unloads and reattaches the codec. Treat these
+as diagnostic noise when sound returns and the checks above pass; investigate
+them when accompanied by silence, crackling, or a missing speaker node.
 
 On the verified boot, all three modules loaded from
 `/lib/modules/7.1.8-arch1-3/updates/dkms/`, the parameters were `1` and `0`,

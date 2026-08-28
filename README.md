@@ -126,7 +126,23 @@ mismatch)" lines right after rebind are harmless leftovers.
 [`diagnostics/`](diagnostics/) has the small `/dev/mem`-poking tools used to
 find all this: SSP register dump, polled-PIO SPI exerciser, INTx/IO-APIC/RCBA
 interrupt-routing inspectors, and the LPSS private-register fixer the sleep
-hook grew from. See [diagnostics/README.md](diagnostics/README.md).
+hook grew from. It also includes a read-only system health check:
+
+```bash
+./diagnostics/health-check.sh
+```
+
+See [diagnostics/README.md](diagnostics/README.md).
+
+### Interpreting logs after resume
+
+The resume hooks deliberately detach and re-probe MacBook hardware. A burst of
+`applespi` `-110` timeouts, one or two CRC mismatches, HDA "spurious response"
+messages, and a fresh `brcmfmac` firmware load can therefore appear around a
+successful wake. Judge recovery by the resulting device state, not by the raw
+error count: the Apple SPI Touchpad input node should exist, the MacBook
+speaker node should be present, Wi-Fi should reconnect, and suspend-entry and
+suspend-exit counts should match. The health-check script performs those tests.
 
 If the pci-stub route is ever insufficient, a patched `spi-pxa2xx-core` with
 `poll_mode`/`poll_timeout_ms` parameters (busy-polling the SSP interrupt
